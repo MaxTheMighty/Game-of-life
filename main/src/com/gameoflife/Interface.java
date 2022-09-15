@@ -17,7 +17,7 @@ public class Interface extends JFrame{
     private JToolBar toolBar;
     private JSlider speedSlider;
     private JPanel grid;
-    private JTextArea tesing123TextArea;
+
     private JTextArea stats;
     private boolean running; //
     private final Universe universe;
@@ -115,7 +115,7 @@ public class Interface extends JFrame{
                 b.putClientProperty('y',y);
 
                 cells[y][x] = b;
-                cells[y][x].setBackground(this.universe.currentBoard[y][x] == 'O' ? Color.white : Color.darkGray);
+                cells[y][x].setBackground(this.universe.cellAlive(x,y) ? Color.white : Color.darkGray);
                 this.grid.add(b);
             }
         }
@@ -189,11 +189,11 @@ public class Interface extends JFrame{
     private void updateCellButtons(){
         for(int y = 0; y < this.universe.dim; y++){
             for(int x = 0; x < this.universe.dim; x++){
-                cells[y][x].setBackground(this.universe.currentBoard[y][x] == 'O' ? Color.white : Color.darkGray);
+                updateSingleCell(x,y);
             }
         }
     }
     private void updateSingleCell(int x, int y){
-        cells[y][x].setBackground(this.universe.currentBoard[y][x] == 'O' ? Color.white : Color.darkGray);
+        cells[y][x].setBackground(this.universe.cellAlive(x,y) ? Color.white : Color.darkGray);
     }
 }
