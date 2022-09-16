@@ -6,7 +6,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
-import java.util.concurrent.Flow;
 
 public class Interface extends JFrame{
     private JPanel mainPanel;
@@ -19,7 +18,7 @@ public class Interface extends JFrame{
     private JPanel grid;
 
     private JTextArea stats;
-    private boolean running; //
+    public boolean running; //
     private final Universe universe;
     private JButton[][] cells;
 
@@ -36,105 +35,82 @@ public class Interface extends JFrame{
 
 
     }
-    public boolean getRunning(){
-        return running;
-    }
-
-    public void setRunning(boolean in){
-        running = in;
-    }
-
-    public void update(){
-        this.universe.updateBoard();
-        this.updateCellButtons();
-        this.stats.setText("Generation: " + this.universe.getUpdateCount());
-    }
-
-
-    //anonymous classes
-    private void createListeners(){
-        pauseButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                setRunning(false);
-                System.out.println("pause pressed");
-            }
-        });
-        runButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                setRunning(true);
-                System.out.println("Run pressed");
-            }
-        });
-        stepButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                System.out.println("Step pressed");
-                update();
-            }
-        });
-        clearButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                System.out.println("Clear pressed");
-                universe.clear();
-                updateCellButtons();
-            }
-        });
-        mainPanel.addMouseWheelListener(new MouseWheelListener() {
-            @Override
-            public void mouseWheelMoved(MouseWheelEvent e) {
-                //https://stackoverflow.com/questions/33925884/zoom-in-and-out-of-jpanel
-            }
-        });
-    }
     private void init(){
         cells = new JButton[this.universe.dim][this.universe.dim];
         createUIComponents();
         createListeners();
 
         this.running = false;
-        for(int y = 0; y < this.universe.dim; y++){
-            for(int x = 0; x < this.universe.dim; x++){
-                JButton b = createButton();
-                b.addActionListener(new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        JButton button = (JButton)(e.getSource());
-                        int x = (int)button.getClientProperty('x');
-                        int y = (int)button.getClientProperty('y');
-                        System.out.println(x + " " + y);
-                        if(!getRunning()){
-                            universe.invert(x,y);
-                        }
-                        updateSingleCell(x,y);
-                    }
-                });
-                b.putClientProperty('x',x);
-                b.putClientProperty('y',y);
-
-                cells[y][x] = b;
-                cells[y][x].setBackground(this.universe.cellAlive(x,y) ? Color.white : Color.darkGray);
-                this.grid.add(b);
-            }
-        }
+        createButtons();
 
     }
 
 
+
+    public void update(){
+        this.universe.updateBoard();
+        this.updateCellButtons();
+        this.stats.setText("Generation: " + this.universe.updateCount);
+        updatePanel();
+    }
+
+    private void updatePanel() {
+        this.mainPanel.repaint();
+        this.mainPanel.revalidate();
+    }
+
+
+    //anonymous classes
+    private void createListeners(){
+        setPauseListener();
+        setRunListener();
+        setStepListener();
+        setClearListener();
+        setMouseWheelListener();
+    }
+
+
+
+
+
+
+    private void AddListenerToButton(JButton b) {
+        b.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+                JButton button = (JButton)(e.getSource());
+                int x = (int)button.getClientProperty('x');
+                int y = (int)button.getClientProperty('y');
+
+                if(!running){
+                    universe.invert(x,y);
+                }
+                updateSingleCell(x,y);
+            }
+        });
+    }
+
+
     private void createUIComponents() {
-        // I ended up just making all of the components myself, LOL
-        this.mainPanel = new JPanel(new BorderLayout());
-        this.mainPanel.setVisible(true);
+        createGridLayout();
+        createMainPanel();
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.grid = new JPanel(new GridLayout(this.universe.dim,this.universe.dim,0,0));
-        this.grid.setVisible(true);
-        this.mainPanel.add(this.grid);
-        initToolbar();
+        createToolbarWithButtons();
         this.setContentPane(mainPanel);
         this.setPreferredSize(new Dimension(600,600));
         this.pack();
+    }
+
+    private void createMainPanel() {
+        this.mainPanel = new JPanel(new BorderLayout());
+        this.mainPanel.setVisible(true);
+        this.mainPanel.add(this.grid);
+    }
+
+    private void createGridLayout() {
+        this.grid = new JPanel(new GridLayout(this.universe.dim,this.universe.dim,0,0));
+        this.grid.setVisible(true);
     }
 
     //from https://stackoverflow.com/questions/1839074/howto-make-jbutton-with-simple-flat-style
@@ -147,31 +123,76 @@ public class Interface extends JFrame{
     }
 
     public int getUpdateRate(){
-        return this.speedSlider.getValue();
+        return this.speedSlider.getMaximum() - this.speedSlider.getValue();
     }
-    private void initToolbar(){
+
+    private void setMouseWheelListener() {
+        mainPanel.addMouseWheelListener(new MouseWheelListener() {
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e) {
+                //https://stackoverflow.com/questions/33925884/zoom-in-and-out-of-jpanel
+            }
+        });
+    }
+
+    private void setClearListener() {
+        clearButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.out.println("Clear pressed");
+                universe.clear();
+                updateCellButtons();
+            }
+        });
+    }
+
+    private void setStepListener() {
+        stepButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.out.println("Step pressed");
+                System.out.println(e.getModifiers());
+                update();
+            }
+        });
+    }
+
+    private void setRunListener() {
+        runButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                running = true;
+                System.out.println("Run pressed");
+            }
+        });
+    }
+
+    private void setPauseListener() {
+        pauseButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                running = false;
+                System.out.println("Pause pressed");
+            }
+        });
+    }
+
+
+    private void createToolbarWithButtons(){
+        Dimension moduleDimension = new Dimension(70,30);
+        createRunButton(moduleDimension);
+        createPauseButton(moduleDimension);
+        createStepButton(moduleDimension);
+        createSlider();
+        createStatsArea();
+        createClearButton(moduleDimension);
+        createToolBar();
+        this.mainPanel.add(this.toolBar, BorderLayout.SOUTH);
+
+    }
+
+    private void createToolBar() {
         this.toolBar = new JToolBar();
-        this.runButton = createButton();
-        this.pauseButton = createButton();
-        this.stepButton = createButton();
-        this.speedSlider = new JSlider();
-        this.speedSlider.setValue(500);
-        this.stats = new JTextArea("Generation: 0");
-        this.stats.setVisible(true);
-        this.speedSlider.setMinimum(10);
-        this.speedSlider.setMaximum(1000);
-        this.speedSlider.setVisible(true);
-        this.clearButton = createButton();
-        this.clearButton.setText("Clear");
-        this.runButton.setText("Run");
-        this.pauseButton.setText("Pause");
-        this.stepButton.setText("Step");
-        Dimension dims = new Dimension(70,30);
-        //maybe move this to createButton func
-        this.runButton.setPreferredSize(dims);
-        this.pauseButton.setPreferredSize(dims);
-        this.stepButton.setPreferredSize(dims);
-        this.clearButton.setPreferredSize(dims);
         this.toolBar.setLayout(new FlowLayout());
         this.toolBar.add(runButton,BorderLayout.CENTER);
         this.toolBar.add(pauseButton);
@@ -181,8 +202,60 @@ public class Interface extends JFrame{
         this.toolBar.add(stats);
         this.toolBar.setVisible(true);
         this.toolBar.setPreferredSize(new Dimension(70,40));
-        this.mainPanel.add(this.toolBar, BorderLayout.SOUTH);
+    }
 
+    private void createStatsArea() {
+        this.stats = new JTextArea("Generation: 0");
+        this.stats.setVisible(true);
+    }
+
+    private void createClearButton(Dimension moduleDimension) {
+        this.clearButton = createButton();
+        this.clearButton.setText("Clear");
+        this.clearButton.setPreferredSize(moduleDimension);
+
+    }
+
+    private void createStepButton(Dimension moduleDimension) {
+        this.stepButton = createButton();
+        this.stepButton.setText("Step");
+        this.stepButton.setPreferredSize(moduleDimension);
+    }
+
+    private void createPauseButton(Dimension moduleDimension) {
+        this.pauseButton = createButton();
+        this.pauseButton.setText("Pause");
+        this.pauseButton.setPreferredSize(moduleDimension);
+    }
+
+    private void createRunButton(Dimension moduleDimension) {
+        this.runButton = createButton();
+        this.runButton.setText("Run");
+        this.runButton.setPreferredSize(moduleDimension);
+    }
+
+    private void createSlider() {
+        this.speedSlider = new JSlider();
+        this.speedSlider.setValue(500);
+        this.speedSlider.setMinimum(1);
+        this.speedSlider.setMaximum(500);
+        this.speedSlider.setVisible(true);
+
+    }
+    private void createButtons() {
+        for(int y = 0; y < this.universe.dim; y++){
+            for(int x = 0; x < this.universe.dim; x++){
+                JButton button = createButton();
+                button.setOpaque(true);
+                button.setBorderPainted(false);
+                AddListenerToButton(button);
+                button.putClientProperty('x',x);
+                button.putClientProperty('y',y);
+                cells[y][x] = button;
+                updateSingleCell(x,y);
+                this.grid.add(button);
+            }
+        }
     }
 
 
@@ -194,6 +267,6 @@ public class Interface extends JFrame{
         }
     }
     private void updateSingleCell(int x, int y){
-        cells[y][x].setBackground(this.universe.cellAlive(x,y) ? Color.white : Color.darkGray);
+        cells[y][x].setBackground(this.universe.cellAlive(x,y) ? Color.BLACK : Color.WHITE);
     }
 }
